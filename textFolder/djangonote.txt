@@ -1,0 +1,376 @@
+
+""" Django for begineers book """
+
+""" Django Notes """
+
+# Check this following thing install or Notes
+    1. python --version
+    2. pip --version
+    3. pipenv --version ( python -m pipenv --version) ( pip show pipenv)
+    4. git --version
+    5. tree --version
+
+# You should use a virtual environment for each new python project
+    1. pipenv install Django
+    2. pip shell (it activate the virtual environment)
+
+""" Create a new Django project """
+    # CL: django-admin startproject test_project .(important to add period here)
+
+    # Review each new project files does
+        # settings.py file controls our project settings
+        # urls.py tells Django which pages to build in response to a browser or URL request
+        # wsgi.py( stand for web server gateway interface) helps django serve our eventual web pages
+        # build-in web server for Django local web server ( CL: python manage.py runserver)
+
+
+
+""" Create an app """
+    # djanog uses the concept of projects and apps to keep code clean and readable.
+    # a single django project contains one or more apps within it that work together to power a web application.
+    # For example, a real-world Django e-commerce site might have one app for user authentication,
+        another app for payments, and a third app to power item
+    # to create first app (CL: python manage.py startapp pages)
+    # perform a migration to set up the database (CL: python manage.py migrate)
+    # run (CL: python manage.py runserver) to check server 
+
+    # Review each new pages app file does
+        # admin.py is a configuration file for the build-in Django Admin app
+        # apps.py is a configuration file for the app itself
+        # migrations/ Keeps track of any changes to our models.py file so our database and models.py stay in sync
+        # models.py is where we define our database models, which django automatically translates into database tables
+        # tests.py is for our app-specific tests
+        # views.py is where we handle the request/response logic for our web app
+
+    # Even though our new app exits within the Django project, Django doesn’t “know”
+        about it until we explicitly add it. In your text editor open the settings.py file and
+        scroll down to INSTALLED_APPS where you’ll see six built-in Django apps already there.
+        Add our new pages app at the top ('pages.apps.PagesConfig', # new)
+
+
+""" Database """
+    # execute the migrate command to create an initial database based on django default settings
+        ( CL: python manage.py migrate) you will see there is now a db.sqlite3 file represent
+        our SQLite database.
+    # Technically a db.sqliteǒ file is created the first time you run either migrate or
+        runserver. Using runserver configures a database using Django’s default settings,
+        however migrate will sync the database with the current state of any database models
+        contained in the project and listed in INSTALLED_APPS.
+
+    # Create a database models
+        # create a database model where we can store and display posts from our users.
+        # Django will turn this model into database table for us.
+        # open models.py file django import a module models to help us build new database models, which will
+            "model" the characteristic of the data in our database. We want to create a model to store the textual content of a message board posts
+            """
+            from django.db import models
+
+            class Post(models.Model):
+                text = models.TextField()
+            # want to add title, author, body
+                title = models.Charfield(max_length=200)
+                author = models.ForeignKey(
+                    'auth.User',
+                    on_delete=models.CASCADE,
+                )
+            # To make author field optional 
+                author = models.ForeignKey(
+                    'auth.User',
+                    on_delete=models.SET_NULL, # keeps the post if the user is deleted
+                    null=True,                 # Allows database to store NULL values
+                    blank=True,                # Allows forms and admin interface to accepts empty
+                )
+                body = models.TextField()
+            """
+
+    # Activating models
+        # Now that our new model is created we need to activate it. Whenever we create or modify and existing model
+            We will need to update django in a two-step process.
+            1. first we create a migration file with the makemigrations command which generate the SQL commands for preinstalled
+                apps in our INSTALLED_APPS setting. Migration files do not execute those commands on our database file.
+                (CL: python manage.py makemigrations blog)
+            2. Second we build the actual database with migrate which does execute the instructions in our migrations file.
+                (CL: python manage.py migrate blog)
+
+
+""" Django Admin """
+    # To use the Django admin, we first nedd to create a superuser who can login in.
+        (CL: python manage.py createsuperuser )
+    # type your username and password and Restart the django server with python manage.py runserver and in your 
+        browser go to http://127.0.0.1:8000/admin/
+    # But where our posts app? It not displayed on the main admin page
+    # We need to explicity tell Django what to display in the admin. we cand change fix this easily by opening the
+        adming.py file and editing it to look like this:
+        """
+        from django.contrib import admin
+        from .models import Post
+        admin.site.register(Post)
+        """
+    # django now knows that is should display our posts app and its database model Post on the
+        adming page.
+    # our new entry is called "Post object", which isn't very helpful
+    # let change that . in the models.py file, add a new funtion __str__
+        """
+        from django.db import models
+        class Post(models.Model):
+            text = models.TextField()
+
+            def __str__(self):
+                return self.text[:50]
+        """
+    # this will display the first 50 characters of the text field.
+
+
+
+
+""" Views/Templates/URLs """
+    # in order to display our database content on our homepage, we have to wire up our 
+        views, templates, and URLConfs.
+    # we used the build-in generic Template-View to display a template file on homepage.Now we want to
+        list the contents of our database model.
+    # in views.py file enter the python code below:
+        """
+        from django.views.generic import ListView
+        from .models import Post            # our database model post
+        class HomePageView(ListView):
+            model = Post
+            template_name = 'home.html'
+        """
+    # In the view, we subclass ListView, specify our model name and specify our template reference.
+
+""" Templates """
+    # The URLs control the initial route, the entry point into a page, such as /about,
+        the views contain the logic or the "What", and the template has the html file.
+    # By default, Django looks within each app for templates. In our pages app it will expect a home.html 
+    # By making a small tweak to our settings.py file
+        we can tell Django to also look in this project-level folder for templates.
+    # update settings.py to tell Django to look at the project-level for templates. This is a one-line
+        change to the setting 'DIRS' under TEMPLATES ( 'DIRS': [os.path.join(BASE_DIR, 'templates')], # new)
+    # ListView returns and object called object_list that we want to display in our template.
+    # In our templates file home.html we can use the django Templating Language's for loop to list all the
+        object in object_list.
+
+        """
+        <!-- templates\base.html -->
+        <html>
+            <head>
+                <title>Django blog</title>
+            </head>
+            <body>
+                <header>
+                    <h1><a href="{% url 'home' %}">Django blog</a></h1>
+                </header>
+                <div>
+                    {% block content %}
+                # Note that code bw {% block content %} and {% endblock content %} can be filled by other templates.
+                    {% endblock content %}
+                </div>
+            </body>
+        </html>
+        """
+
+        """
+        <!-- templates/home.html -->
+        {% extends 'base.html' %}
+        {% block content %}
+        <ul>
+            {% for post in object_list %}
+                <li>{{ post }}</li>
+            {% endfor %}
+        </ul>
+        {% endblock content %}
+        """
+
+    # Back in our views.py file add the following:
+        """
+            -----------------------------------------
+            model = Post
+            template_name = 'home.html'
+            context_object_name = 'all_posts_list' # new
+        """
+    # don't forget to update our home.html file
+        """
+        -------------------------
+        {% for post in all_posts_list %}
+            <li>{{ post }}</li>
+        {% endfor %}
+    # last step is to set up our URLConfs.
+
+
+    # Extending Templates
+        # think about most web sites, there is content that is repeated on every page(header, footer, etc.)
+        # Would not it be nice if we as developers, could have one canonical place for our header code that Would
+            be inherited by all other templates.
+        # Let create a base.html file containing a header with links to our two pages.
+        # To add url links in our project we can use the build-in url template tag which takes the URL pattern
+            name as an argument.
+        # URL route for our homepage is called home therefore to configure a link to it we would use the 
+            followiing: {% url 'home' %}
+            """
+            <!-- templates\base.html -->
+            <header>
+                <a href="{% url 'home' %}">Home</a> | <a href="{% url 'about' %}">About</a>
+                # To add the admin link to your homepage
+                    <a href="{%url 'admin:index' %}" class="admin-btn">Admin Panel</a>
+                # you usually do not want regular visitors seeing or clicking your admin link.Wrap the link in an
+                    {% if %} block to ensure only logged-in administrators can see it:
+                    """
+                        {% if user.is_authenticated and user.is_staff %}
+                            <div class="admin-shortcut">
+                                <p>Welcome back, Admin!</p>
+                                <a href="{% url 'admin:index' %}">Access Django Admin</a>
+                            </div>
+                        {% endif %}
+                    """
+            </header>
+            {% block content %}
+            {% endblock content %}
+            """
+
+
+
+
+""" Static files """
+    # we need to add some CSS which is referred to as a static file because, unlike our 
+        dyanmaic databasse content, it doesn't change. To add static files like CSS, javaScript,
+        anad images to our django project.
+    # we nee to update settings.py to tell django where to look for these static files.
+    # update settings.py with a one-line change for STATICFILES_DIRS.Add it at the bottom of the
+        file below the entry for STATIC_URL.
+        ( STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] )
+    # create a css folder within static and add a new base.css file in it.
+    # to add the static files to our templates by adding {% load static %} to the top of base.html.
+    """
+    <!-- templates\base.html -->
+    {% load static %}
+    <html>
+        <head>
+            <title>Django blog</title>
+            <link href="{% static 'css/base.css' %}" rel="stylesheet">
+        </head>
+        <body>
+            <header>
+                <h1><a href="{% url 'home' %}">Django blog</a></h1>
+            </header>
+            <div>
+                {% block content %}
+                {% endblock content %}
+            </div>
+        </body>
+    </html>
+    """
+
+
+
+""" Views and URLConfs """
+    # Views determine what content is displayed on a given page while
+        URLConfs determine where that content is going.
+    # let’s map out the order of a given HTTP request/response cycle.
+        When you type in a URL, such as https://djangoforbeginners.com the first thing
+        that happens within our Django project is a URLpattern is found that matches the homepage.
+        The URLpattern specifies a view which then determines the content for the page
+        and a template for styling. The end result is sent back to the user as an HTTP response.
+    # URL - View - Model - template
+    # updating the views.py file in our app ( create a file home.html in templates)
+        """
+        from django.views.generic import TemplateView
+        class HomePageView(TemplateView):
+            template_name = 'home.html'
+        """
+    # configure our urls.py within the app(pages), create a new urls.py file
+        """
+        from django.urls import path
+        from .views import HomePageView
+        urlpatterns = [
+            path('', HomePageView.as_view(), name='home'),
+        ]
+        """
+    # configure our project-level urls.py file
+        """ 
+        from django.contrib import admin
+        from django.urls import path, include
+        urlpatterns = [
+            path('admin/', admin.site.urls),
+            path('', include('app_folder.urls')), # new
+        ]
+        """
+    # Project-level means the topmost, parent directory of an application.In this case 
+    where both the project and pages app folder exist. Once we are inside a specific app we are "app-level".
+
+
+
+""" Tests """
+    # Previously we were only testing static pages so we used SimpleTestCase. But now that
+        our homepage works with a database, we need to use TestCase which will let us create
+        a “test” database we can check against. In other words, we don’t need to run tests on
+        our actual database but instead can make a separate test database, fill it with sample
+        , and then test against it.
+    # check that it is stored correctly in the database It’s important that all our 
+        test methods start with test_ so Django knows to test them!
+    # code :
+        """
+        from django.text import TestCase
+        from .models import Post
+        class PostModelTest(TestCase):
+
+            def setUp(self):
+                Post.objects.create(text='just a test')
+            def test_text_content(self): # run first test
+                post=Post.objects.get(id=1)
+                expected_object_name = f'{post.text}'
+                self.assertEqual(expected_object_name, 'just a test')
+        
+        class HomePageViewTest(TestCase):
+
+            def setUp(self):
+                Post.objects.create(text='this is another test')
+            def test_view_url_exists_at_proper_location(self):
+                resp = self.client.get('/')
+                self.assertEqual(resp.status_code, 200)
+            def test_view_url_by_name(self):
+                resp = self.client.get(reverse('home'))
+                self.assertEqual(resp.status_code, 200)
+            def test_view_uses_correct_template(self):
+                resp = self.client.get(reverse('home'))
+                self.assertEqual(resp.status_code, 200)
+                self.assertTemplateUsed(resp, 'home.html')
+        
+    # first test was on the model and second test on our one and only page: the homepage.
+    # To run the test type ( CL: python manage.py test)
+
+
+
+
+
+""" Git Command Line """
+    # winget install git
+    # git config --global user.name "your name"
+    # git config __global user.email "yourname@email.com"
+    # first step is to initialize gie to our repository ( CL: git init)
+    # (CL : git status) see a list of changes since the last git commit.
+    # To add all changes by using the command ( CL : git add -A)
+    # commit the changes along with a message describing what has changed
+        ( CL: git commit -m "initial commit")
+
+
+""" Bitbucket Command Line """
+    # use two command to add our project to Bitbucket.Note that your command will differ from mine since
+        you have a different username.
+        (CL: git remote add origin git@bitbucket.org:<username>/hello-world.git)
+    # After running this command to configure git with this bitbucket repository, we must "push" our code into it.
+        (CL: git push -u origin master)
+
+
+
+""" github """
+    # Now, map your local repository to the remote one you created on GitHub and send the files up.
+    # Link your local repo to GitHub (Replace URL with your copied Link)
+        (CL: git remote add origin https://github.com/moronbit5q/djangoProject)
+    # Verify the connection pointing to your URL
+        (CL: git remote -v)
+    # Push your code to the main branch
+        (CL: git push -u origin main)
+        (CL: git push -u origin main --force)
+    # check your local branch name by running
+        (CL: git branch)
+

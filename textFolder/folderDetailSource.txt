@@ -1,0 +1,19 @@
+""" youtube.com """
+
+    # socialApp 
+    # freeCodeCamp (Build a social Media App with Django- Python Web Framework Tutorial)
+
+
+""" Django 4 by Example Book """
+
+    # blogApp
+
+
+""" Django for begineer """
+    
+    # blogApp1
+    # helloWorld
+    # messageApp
+    # messageApp1
+    # pages
+    # helloWorld2
